@@ -5,45 +5,43 @@ from openai import OpenAI
 # --- CONFIGURATION ---
 st.set_page_config(page_title="The Stoic Companion", page_icon="🏛️")
 
-# --- CUSTOM STYLING (THE PURE BLACK & WHITE THEME) ---
+# --- CUSTOM STYLING (THE FIXED BLACK THEME) ---
 st.markdown("""
 <style>
     /* 1. MAIN BACKGROUND & TEXT */
     .stApp {
         background-color: #000000;
-        color: #FFFFFF; /* Pure white text */
+        color: #FFFFFF;
     }
     
-    /* 2. HIDE TOP HEADER & FOOTER */
+    /* 2. HIDE ONLY THE HEADER (Keep footer visible so input bar works) */
     header {visibility: hidden;}
-    footer {visibility: hidden;}
     
-    /* 3. FIX THE BOTTOM INPUT BAR (Remove white background) */
+    /* 3. STYLE THE BOTTOM CONTAINER */
     div[data-testid="stBottom"] {
         background-color: #000000;
-        border-top: 1px solid #333; /* Subtle line to separate input */
+        border-top: 1px solid #333; 
     }
     
-    /* 4. INPUT BOX STYLING */
+    /* 4. INPUT BOX STYLING (High Contrast White) */
     .stChatInput textarea {
-        background-color: #1E1E1E !important; /* Dark grey box */
-        color: #FFFFFF !important; /* White typing text */
-        border: 1px solid #444 !important; /* Subtle border */
+        background-color: #1E1E1E !important;
+        color: #FFFFFF !important;
+        border: 1px solid #555 !important;
     }
     
-    /* 5. PLACEHOLDER TEXT ("What is burdening your mind?") */
-    /* This forces the placeholder to be light/white */
+    /* 5. PLACEHOLDER TEXT styling */
     .stChatInput textarea::placeholder {
-        color: #F0F0F0 !important;
+        color: #DDDDDD !important;
         opacity: 1;
     }
     
-    /* 6. CHAT MESSAGE BUBBLES */
+    /* 6. CHAT MESSAGE COLORS */
     .stChatMessage {
         background-color: #000000;
     }
     div[data-testid="stMarkdownContainer"] p {
-        color: #FFFFFF !important; /* Ensure all chat text is white */
+        color: #FFFFFF !important;
     }
     
     /* 7. FONTS & QUOTE BOX */
@@ -56,7 +54,7 @@ st.markdown("""
         padding-left: 15px;
         margin-bottom: 30px;
         font-style: italic;
-        color: #DDDDDD; /* Slightly softer white for the quote to distinguish it */
+        color: #E0E0E0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -165,7 +163,6 @@ quotes = [
     "Better to trip with the feet than with the tongue. — Zeno of Citium",
     "Steel your sensibilities, so that life shall hurt you as little as possible. — Zeno of Citium"
 ]
-
 day_of_year = datetime.datetime.now().timetuple().tm_yday
 todays_quote = quotes[day_of_year % len(quotes)]
 
@@ -173,4 +170,50 @@ todays_quote = quotes[day_of_year % len(quotes)]
 st.title("The Stoic Companion")
 st.markdown(f"<div class='quote-box'>{todays_quote}</div>", unsafe_allow_html=True)
 
-#
+# --- AI SETUP ---
+if "OPENAI_API_KEY" in st.secrets:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+else:
+    st.error("API Key not found. Please set it in Streamlit secrets.")
+    st.stop()
+
+# Initialize Chat History
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    system_prompt = """
+    You are The Stoic Companion. Your persona is that of a modern, supportive, and inspirational counsellor.
+    While your wisdom is rooted in ancient philosophy, your voice is contemporary, warm, and empathetic.
+    Your central purpose is to analyse a user’s dilemma, apply Stoic teachings (dichotomy of control, amor fati), and provide guidance.
+    
+    GUIDELINES:
+    - Use perfect UK English (colour, analyse).
+    - Be concise but empathetic.
+    - Do not provide medical, clinical, or psychiatric advice.
+    - Structure responses with: 'The Stoic Perspective', 'Actionable Guidance', and 'Practice & Contentment'.
+    """
+    st.session_state.messages.append({"role": "system", "content": system_prompt})
+
+# Display chat messages
+for message in st.session_state.messages:
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+# Chat Input
+if prompt := st.chat_input("What is burdening your mind?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        stream = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ],
+            stream=True,
+        )
+        response = st.write_stream(stream)
+    
+    st.session_state.messages.append({"role": "assistant", "content": response})

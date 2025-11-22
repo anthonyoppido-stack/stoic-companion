@@ -1,3 +1,17 @@
+This is happening because while we told the "paragraphs" to be white, we forgot to tell the **numbered lists** (like 1, 2, 3) to be white, so they are defaulting to a dark grey that is hard to read on black.
+
+I have fixed the code below by adding a "catch-all" rule that forces **everything** (lists, bullet points, headers) to be bright white.
+
+### **The Fix (Copy & Paste)**
+
+1.  Go to **GitHub** -\> `app.py`.
+2.  **Delete everything**.
+3.  **Paste** this version.
+4.  **Commit** and **Refresh**.
+
+<!-- end list -->
+
+```python
 import streamlit as st
 import datetime
 from openai import OpenAI
@@ -36,16 +50,17 @@ st.markdown("""
         opacity: 1;
     }
     
-    /* 6. CHAT MESSAGE COLORS */
+    /* 6. FORCE ALL CHAT MESSAGE TEXT TO WHITE */
     .stChatMessage {
         background-color: #000000;
     }
-    div[data-testid="stMarkdownContainer"] p {
+    /* This specific rule fixes the dark list text */
+    div[data-testid="stMarkdownContainer"] * {
         color: #FFFFFF !important;
     }
     
     /* 7. FONTS & QUOTE BOX */
-    h1, h2, h3, p {
+    h1, h2, h3, p, li, ol, ul {
         font-family: 'Georgia', serif;
         color: #FFFFFF !important;
     }
@@ -221,3 +236,4 @@ if prompt := st.chat_input("What is burdening your mind?"):
         response = st.write_stream(stream)
     
     st.session_state.messages.append({"role": "assistant", "content": response})
+```
